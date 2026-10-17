@@ -1,0 +1,9 @@
+<launch>
+    <node pkg="patrol" type="patrol.py" name="patrol_node" output="screen">
+        <rosparam file="$(find patrol)/config/patrol.yaml"
+                  command="load"
+                  subst_value="true"/>
+    </node>
+</launch>
+
+    

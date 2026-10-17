@@ -1,0 +1,37 @@
+# Patrol node runtime mode: online or offline
+mode: online
+# joint: 原 ServoJ；cartesian: CSV TCP 位姿转换后调用 /move_to_pose
+execute_type: joint
+# 以下均为 [x_m, y_m, z_m, rx_deg, ry_deg, rz_deg]，固定轴 X-Y-Z 欧拉角。
+# Dobot 用户坐标系在 MoveIt reference_frame 中的位姿（服务目前为 base_link）。
+# 填写六个数值 [x_m, y_m, z_m, rx_deg, ry_deg, rz_deg]：
+# 前三项是 Dobot 用户坐标系原点在服务 reference_frame 中的位置，单位米。
+# 后三项是该用户坐标系在 reference_frame 中的姿态，固定轴 X-Y-Z 欧拉角，单位度。
+# 应与 CSV 录制时使用的 User 坐标系一致；这里填写的是固定坐标系变换。
+# 若已确认 User0 与 arm_base_link 完全对齐，则取 arm_base_link 相对 base_link 的位姿。
+# 对应 TF 查询方向：target=base_link、source=arm_base_link；可从已核对的 URDF/TF 取值。
+# 只有确认用户坐标系与 reference_frame 原点、轴方向均重合时，才填 [0, 0, 0, 0, 0, 0]。
+cartesian_reference_from_user: [0.0, 0.0, 0.735, 0.0, 0.0, 179.995]
+# 录制时 Dobot TCP 在 MoveIt tip_link 中的位姿（服务目前为 tool0）。
+# 必须匹配录制时实际全局 User/Tool；工具表中的相机 Tool1 不一定是反馈使用的 TCP。
+# 同样填写 [x_m, y_m, z_m, rx_deg, ry_deg, rz_deg]：
+# 前三项是所录 TCP 原点在 MoveIt tip_link 中的位置，单位米；后三项是其姿态，单位度。
+# 填写方向为 T_tip_tcp（TCP 在 tip_link 中的位姿）；代码会自动求逆，不需提前求逆。
+# 先确定 CSV 对应的是 Tool0 法兰还是 Tool1 相机，并核对 MoveIt tool0 实际代表的末端。
+# 若使用 Tool1，相机标定表的偏置需结合 MoveIt 末端模型，换算为 TCP 相对 tip_link 的变换。
+# 控制器工具表中的位置单位是毫米，换算为米需除以 1000；角度仍填写度。
+# 只有确认 MoveIt tip_link 与所录 TCP 原点、轴方向均重合时，才填 [0, 0, 0, 0, 0, 0]。
+cartesian_tip_from_tcp: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+# null 会阻止笛卡尔模式启动。
+log_path_prefix: '$(find patrol)/logs/patrol_node'
+record_path_prefix: '$(find patrol)/records'
+waypoints_dir_path: '$(find demonstrate)/path/'
+# 留空沿用 <车型>.csv；可填写 demonstrate 新录制的文件名。
+waypoints_file_name: HXD1C_0917.csv
+min_base_move_distance: 0.08
+csv_path: '$(find demonstrate)/path/HXD1C_108_PK.csv'
+
+offline:
+  task_id: 100
+  train_type_name: HXD3C
+  start_timestamp: '2025-12-26_19-09-00'
