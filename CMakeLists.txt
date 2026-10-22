@@ -8,13 +8,8 @@ find_package(catkin REQUIRED COMPONENTS
   nav_msgs
   message_generation
   moma_service
-  moveit_whole_body_ik
 )
 
-add_service_files(
-  FILES
-  SendArmPoint.srv
-)
 
 generate_messages()
 
@@ -26,13 +21,6 @@ catkin_package(
   nav_msgs
   message_runtime
   moma_service
-  moveit_whole_body_ik
-)
-
-catkin_install_python(
-  PROGRAMS
-    scripts/arm_point_sender.py
-  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
 install(
