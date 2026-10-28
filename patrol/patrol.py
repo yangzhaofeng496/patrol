@@ -427,7 +427,6 @@ class PatrolNode(object):
     def cartesian_target(self, tcp_pose):
         # T_reference_tip = T_reference_user * T_user_tcp * inverse(T_tip_tcp)
         arm_base_link_target = self.pose_matrix(tcp_pose, 0.001)
-        rospy.logerr(f'(arm_base_link_target)')
         target = self.reference_from_user.dot(arm_base_link_target).dot(self.tcp_from_tip)
         quaternion = quaternion_from_matrix(target)
         values = tuple(float(v) for v in target[:3, 3]) + tuple(float(v) for v in quaternion)
