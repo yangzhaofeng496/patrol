@@ -13,11 +13,9 @@ from tf.transformations import (
 
 from moma_service.srv import ServoJ
 from patrol.srv import SendArmPoint, SendArmPointResponse
-
-try:
-    from patrol.path_utils import resolve_ros_path
-except ImportError:
-    from path_utils import resolve_ros_path
+import sys
+sys.path.append("/home/shansu/moma_github_ws/src/moma-patrol-system/patrol/patrol")
+from path_utils import resolve_ros_path
 
 
 class ArmPointSender:

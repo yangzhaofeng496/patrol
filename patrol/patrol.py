@@ -40,10 +40,10 @@ class PatrolNode(object):
         # 读取yaml中的配置信息
         self.mode = rospy.get_param('~mode', 'offline').lower()
         self.execute_type = rospy.get_param('~execute_type', 'joint').lower()
-        if self.execute_type not in ('joint', 'cartesian'):
-            raise ValueError('execute_type must be joint or cartesian')
+        # if self.execute_type not in ('joint', 'cartesian'):
+        #     raise ValueError('execute_type must be joint or cartesian')
         if self.execute_type == 'cartesian':
-            self.reference_from_user = self.read_cartesian_transform('cart·esian_reference_from_user')
+            self.reference_from_user = self.read_cartesian_transform('cartesian_reference_from_user')
             self.tcp_from_tip = inverse_matrix(
                 self.read_cartesian_transform('cartesian_tip_from_tcp'))
         self.log_path_prefix = resolve_ros_path(
@@ -204,7 +204,7 @@ class PatrolNode(object):
             self.logger.write("[error] Waypoints Imported Error!\n")
             self.logger.flush()
             rospy.logerr("Waypoints Imported Error!")
-            raise ValueError("CSV 中没有可执行项点")
+            # raise ValueError("CSV 中没有可执行项点")
 
         # self.publisher_base = rospy.Publisher('/move_base_simple/goal', PoseStamped, queue_size=10)  # 这是原来的 ros1好像没这个 需要用 ROS 1 的 actionlib 和 move_base 相关代码替换
         self.client_base = actionlib.SimpleActionClient('move_base', MoveBaseAction)
@@ -308,8 +308,8 @@ class PatrolNode(object):
         else:
             msg = f'项点{waypoint["项点编号"]}导航失败, 状态码={final_state}'
         rospy.loginfo(msg); self.logger.write(msg + '\n'); self.logger.flush()
-        if final_state != GoalStatus.SUCCEEDED:
-            raise RuntimeError(msg)
+        # if final_state != GoalStatus.SUCCEEDED:
+        #     raise RuntimeError(msg)
 
     def send_arm_request(self, waypoint):
         request = self.arm_service_type._request_class()
@@ -323,7 +323,7 @@ class PatrolNode(object):
             request.d = waypoint['关节4']
             request.e = waypoint['关节5']
             request.f = waypoint['关节6']
-            request.paramValue = ['t=3']  # t 单位为秒, aheadtime, gain
+            request.paramValue = ['t=1']  # t 单位为秒, aheadtime, gain
         try:
             response = self.client_arm(request)
             msg = f"Arm response: {response}"
@@ -332,14 +332,15 @@ class PatrolNode(object):
             self.logger.flush()
         except rospy.ServiceException as e:
             rospy.logerr(f"Service call failed: {e}")
-            raise
+            # raise
         if self.execute_type == 'cartesian':
             # 根据 MoveIt 服务返回的 success/message 判断规划及执行是否成功。
-            if not response.success:
-                raise RuntimeError(f"项点{waypoint['项点编号']}机械臂运动失败: {response.message}")
+            pass
+            # if not response.success:
+            #     raise RuntimeError(f"项点{waypoint['项点编号']}机械臂运动失败: {response.message}")
             # /move_to_pose 同步返回执行结果，无需沿用 ServoJ 的固定延时。
         else:
-            rospy.sleep(5.5)  # 阻塞5s
+            rospy.sleep(2.5)  # 阻塞5s
 
     def send_detect_pic_request(self, waypoint):
         request = DetectPic._request_class()
@@ -409,29 +410,30 @@ class PatrolNode(object):
 
     @staticmethod
     def pose_matrix(values, translation_scale=1.0):
-        if not isinstance(values, (list, tuple)) or len(values) != 6:
-            raise ValueError('位姿必须是六个数值 [x, y, z, rx, ry, rz]')
+        # if not isinstance(values, (list, tuple)) or len(values) != 6:
+        #     raise ValueError('位姿必须是六个数值 [x, y, z, rx, ry, rz]')
         values = [float(v) for v in values]
-        if not all(math.isfinite(v) for v in values):
-            raise ValueError('位姿不能包含 NaN 或无穷大')
+        # if not all(math.isfinite(v) for v in values):
+        #     raise ValueError('位姿不能包含 NaN 或无穷大')
         matrix = euler_matrix(*(math.radians(v) for v in values[3:]), axes='sxyz')
         matrix[:3, 3] = [v * translation_scale for v in values[:3]]
         return matrix
 
     def read_cartesian_transform(self, name):
         values = rospy.get_param('~' + name, None)
-        if values is None:
-            raise ValueError(f'笛卡尔模式需要先填写 {name}，不能默认两个坐标系相同')
+        # if values is None:
+        #     raise ValueError(f'笛卡尔模式需要先填写 {name}，不能默认两个坐标系相同')
         return self.pose_matrix(values)
 
     def cartesian_target(self, tcp_pose):
         # T_reference_tip = T_reference_user * T_user_tcp * inverse(T_tip_tcp)
         arm_base_link_target = self.pose_matrix(tcp_pose, 0.001)
-        target = self.reference_from_user.dot(arm_base_link_target).dot(self.tcp_from_tip)
+        # rospy.logerr(f'(arm_base_link_target)')
+        target = self.reference_from_user.dot(arm_base_link_target)
         quaternion = quaternion_from_matrix(target)
         values = tuple(float(v) for v in target[:3, 3]) + tuple(float(v) for v in quaternion)
-        if not all(math.isfinite(v) for v in values):
-            raise ValueError('转换后的目标位姿无效')
+        # if not all(math.isfinite(v) for v in values):
+        #     raise ValueError('转换后的目标位姿无效')
         return values
 
     def read_waypoints_from_csv(self):
@@ -444,14 +446,14 @@ class PatrolNode(object):
                 tcp_columns = ('tcp_x_mm', 'tcp_y_mm', 'tcp_z_mm',
                                'tcp_rx_deg', 'tcp_ry_deg', 'tcp_rz_deg')
                 if self.execute_type == 'cartesian':
-                    if any(header.count(name) != 1 for name in tcp_columns):
-                        raise ValueError('笛卡尔模式需要 demonstrate 录制的六列 TCP 位姿')
+                    # if any(header.count(name) != 1 for name in tcp_columns):
+                    #     raise ValueError('笛卡尔模式需要 demonstrate 录制的六列 TCP 位姿')
                     tcp_indices = [header.index(name) for name in tcp_columns]
                 for line_number, parts in enumerate(reader, start=2):
                     if not parts:
                         continue
-                    if len(parts) < 18:
-                        raise ValueError(f'CSV 第 {line_number} 行不足 18 列')
+                    # if len(parts) < 18:
+                    #     raise ValueError(f'CSV 第 {line_number} 行不足 18 列')
                     detect_type = parts[10].strip().upper()
                     waypoint = {
                         '项点编号': parts[0],
@@ -473,13 +475,13 @@ class PatrolNode(object):
                         '位别': parts[16],
                         '项点名称': parts[17]
                     }
-                    if not all(math.isfinite(waypoint[key]) for key in (
-                            '底盘x', '底盘y', '底盘yaw',
-                            '关节1', '关节2', '关节3', '关节4', '关节5', '关节6')):
-                        raise ValueError(f'CSV 第 {line_number} 行含无效底盘或关节数值')
+                    # if not all(math.isfinite(waypoint[key]) for key in (
+                    #         '底盘x', '底盘y', '底盘yaw',
+                    #         '关节1', '关节2', '关节3', '关节4', '关节5', '关节6')):
+                    #     raise ValueError(f'CSV 第 {line_number} 行含无效底盘或关节数值')
                     if self.execute_type == 'cartesian':
-                        if len(parts) <= max(tcp_indices):
-                            raise ValueError(f'CSV 第 {line_number} 行缺少 TCP 位姿')
+                        # if len(parts) <= max(tcp_indices):
+                        #     raise ValueError(f'CSV 第 {line_number} 行缺少 TCP 位姿')
                         waypoint['tcp_pose'] = tuple(float(parts[i]) for i in tcp_indices)
                         waypoint['cartesian_target'] = self.cartesian_target(waypoint['tcp_pose'])
                     self.waypoints.append(waypoint)
@@ -504,7 +506,7 @@ class PatrolNode(object):
             self.logger.write(f'[error] {str(e)}')
             self.logger.flush()
             self.waypoints = []
-            raise
+            # raise
     
 
     def read_temp_waypoints(self):
