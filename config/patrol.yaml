@@ -27,9 +27,9 @@ log_path_prefix: '$(find patrol)/logs/patrol_node'
 record_path_prefix: '$(find patrol)/records'
 waypoints_dir_path: '$(find demonstrate)/path/'
 # 留空沿用 <车型>.csv；可填写 demonstrate 新录制的文件名。
-waypoints_file_name: HXD1C_0917.csv
+# waypoints_file_name: HXD1C_0917.csv
 min_base_move_distance: 0.08
-csv_path: '$(find demonstrate)/path/HXD1C_108_PK.csv'
+# csv_path: '$(find demonstrate)/path/HXD1C_108_PK.csv'
 
 offline:
   task_id: 100
