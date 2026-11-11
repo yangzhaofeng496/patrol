@@ -26,7 +26,11 @@ from moma_service.srv import DisableRobot
 import actionlib
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 from actionlib_msgs.msg import GoalStatus
-from tf.transformations import euler_matrix, inverse_matrix, quaternion_from_matrix
+from tf.transformations import euler_matrix, inverse_matrix, quaternion_from_matrix, euler_from_quaternion
+
+import tf2_ros
+import tf2_msgs.msg
+
 
 try:
     from .path_utils import resolve_ros_path
@@ -36,6 +40,11 @@ except ImportError:
 class PatrolNode(object):
     def __init__(self):
         rospy.init_node('patrol_node')
+
+        self.tf_buffer = tf2_ros.Buffer()
+        self.tf_listener = tf2_ros.TransformListener(self.tf_buffer)
+        self.tf_sub = rospy.Subscriber("/tf", tf2_msgs.msg.TFMessage, self.tf_callback)
+        rospy.loginfo("Start Listening map->base_link (callback mode)")
         
         # 读取yaml中的配置信息
         self.mode = rospy.get_param('~mode', 'offline').lower()
@@ -70,6 +79,7 @@ class PatrolNode(object):
 
 
         # client子节点
+        self.current_goal = None
         self.waypoints = []
         self.temp_waypoints_before = []
         self.temp_waypoints_after = []
@@ -122,6 +132,34 @@ class PatrolNode(object):
                 os.path.join(self.record_path_prefix, self.trainTypeName, self.startTimeStamp)
             )
         
+    def tf_callback(self, msg):
+        try:
+            trans = self.tf_buffer.lookup_transform('map', 'base_link', rospy.Time(0))
+
+            t = trans.transform.translation
+            q = trans.transform.rotation
+            yaw = euler_from_quaternion([q.x, q.y, q.z, q.w])[2]
+            
+            # rospy.loginfo(f"ROBOT POSE IN MAP: x={t.x:.4f} y={t.y:.4f} z={t.z:.4f} yaw={yaw:.4f}\n")
+            # self.logger.write(f"ROBOT POSE IN MAP: x={t.x:.4f} y={t.y:.4f} z={t.z:.4f} yaw={yaw:.4f}\n")
+            # self.logger.flush()
+
+            if self.current_goal is not None:
+                gx, gy = self.current_goal.pose.position.x, self.current_goal.pose.position.y
+                yaw_goal = euler_from_quaternion([self.current_goal.pose.orientation.x,self.current_goal.pose.orientation.y,self.current_goal.pose.orientation.z,self.current_goal.pose.orientation.w])[2]
+            
+                norm = lambda a: (a + math.pi) % (2*math.pi) - math.pi
+
+                dx, dy = gx - t.x, gy - t.y 
+                heading_err = norm(math.atan2(dy,dx) - yaw)
+                dyaw = norm(yaw_goal - yaw)
+                dist = math.hypot(dx, dy)
+
+                rospy.loginfo(f"[{dx*100:.1f}, {dy*100:.1f}], |d| = {dist*100:.1f}cm, dyaw: {math.degrees(dyaw):.1f}deg")
+
+        except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
+            pass
+
     def handle_robot_start_request(self, request):
         response = RobotStart._response_class()
         if self.task_active:
@@ -266,6 +304,7 @@ class PatrolNode(object):
 
         goal = MoveBaseGoal()
         goal.target_pose = goal_pose
+        self.current_goal = goal_pose
 
 
 
